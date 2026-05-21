@@ -86,10 +86,32 @@
         </div>
       </div>
 
-      <label for="name">Nickname</label>
-      <div class="row">
-        <input id="name" maxlength="16" autocomplete="nickname" placeholder="Blob" />
-        <input id="color" class="color" type="color" value="#4ecdc4" title="Colore" />
+      <!-- Banda utente loggato -->
+      <div id="userBand" style="display:none; background:rgba(78,205,196,.1); border:1px solid rgba(78,205,196,.25); border-radius:12px; padding:10px 14px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+        <span style="font-size:13px; color:#9fb2d0;">Giochi come <strong id="loggedAs" style="color:#4ecdc4"></strong></span>
+        <div style="display:flex;gap:8px;">
+          <a href="profile.html" style="font-size:12px;color:#4ecdc4;text-decoration:none;padding:4px 10px;border:1px solid rgba(78,205,196,.3);border-radius:7px;">Profilo →</a>
+          <button id="logoutBtnGame" style="font-size:12px;background:none;border:1px solid rgba(255,107,107,.3);color:#ff9f9f;border-radius:7px;padding:4px 10px;cursor:pointer;">Esci</button>
+        </div>
+      </div>
+
+      <!-- Nickname: mostra input solo se ospite, altrimenti solo colore -->
+      <div id="guestNameRow">
+        <label for="name">Nickname (ospite)</label>
+        <div class="row" style="margin-bottom:4px;">
+          <input id="name" maxlength="16" autocomplete="nickname" placeholder="Blob" />
+          <input id="color" class="color" type="color" value="#4ecdc4" title="Colore" />
+        </div>
+        <div style="font-size:12px;color:#9fb2d0;margin-bottom:10px;">
+          <a href="login.html" style="color:#4ecdc4;">Accedi o registrati</a> per salvare le tue statistiche.
+        </div>
+      </div>
+
+      <div id="loggedNameRow" style="display:none;">
+        <label>Colore</label>
+        <div class="row" style="margin-bottom:4px;">
+          <input id="color2" class="color" type="color" value="#4ecdc4" title="Colore" />
+        </div>
       </div>
 
       <div class="grid2">
@@ -304,6 +326,11 @@
       $('death').classList.add('show');
       $('deathText').textContent = (msg.deathMessage || 'Sei stato assorbito.') + ' Puoi cambiare nome o colore dal menu.';
       $('loginStatus').innerHTML = 'Sei morto: <b>puoi rientrare con un nuovo nome/colore</b>.';
+      // Invia statistiche al server API
+      const snap = state.snapshot;
+      const score = snap?.self?.score || 0;
+      const kills = snap?.self?.kills || 0;
+      submitStats(score, kills, true);
     }
     function hideDeath() {
       if (state.deathTimer) clearTimeout(state.deathTimer);
@@ -311,11 +338,47 @@
       $('death').classList.remove('show');
     }
 
+    // ── Auth: utente loggato o ospite ────────────────────────────────────────
+    const _token = localStorage.getItem('agar_token');
+    const _savedUsername = localStorage.getItem('agar_username') || '';
+    let _isLogged = Boolean(_token && _savedUsername);
+
+    function initAuthUI() {
+      if (_isLogged) {
+        $('loggedAs').textContent = _savedUsername;
+        $('userBand').style.display = 'flex';
+        $('guestNameRow').style.display = 'none';
+        $('loggedNameRow').style.display = 'block';
+        $('randomName').style.display = 'none';
+      }
+    }
+    initAuthUI();
+
+    $('logoutBtnGame').addEventListener('click', () => {
+      localStorage.removeItem('agar_token');
+      localStorage.removeItem('agar_username');
+      window.location.reload();
+    });
+
+    // ── Invia stats a fine partita ────────────────────────────────────────────
+    function submitStats(score, kills, died) {
+      if (!_isLogged || !_token) return;
+      fetch('/api/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _token },
+        body: JSON.stringify({ score: Math.floor(score), kills, died }),
+      }).catch(() => {}); // fire and forget
+    }
+
     $('connect').addEventListener('click', () => {
+      const playerName = _isLogged ? _savedUsername : $('name').value;
+      const playerColor = _isLogged
+        ? $('color2').value
+        : $('color').value;
       send({
         type: 'connect',
-        name: $('name').value,
-        color: $('color').value,
+        name: playerName,
+        color: playerColor,
         host: $('host').value || '127.0.0.1',
         tcpPort: Number($('tcpPort').value || 4000),
         udpPort: Number($('udpPort').value || 4001)

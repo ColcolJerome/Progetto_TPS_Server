@@ -1,0 +1,21 @@
+CREATE DATABASE IF NOT EXISTS agar_db;
+USE agar_db;
+
+CREATE TABLE IF NOT EXISTS Credenziali (
+    IdCredenziali INT PRIMARY KEY AUTO_INCREMENT,
+    Email VARCHAR(255) NOT NULL,
+    Password VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS Utente (
+    IdUtente INT PRIMARY KEY AUTO_INCREMENT,
+    Username VARCHAR(32) NOT NULL,
+    HighestScore INT NOT NULL DEFAULT 0,
+    KillCount INT NOT NULL DEFAULT 0,
+    DeathCount INT NOT NULL DEFAULT 0,
+    IdCredenziali INT,
+    FOREIGN KEY (IdCredenziali) REFERENCES Credenziali(IdCredenziali) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_email ON Credenziali(Email);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_username ON Utente(Username);

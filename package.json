@@ -6,9 +6,10 @@
   "main": "server/server.js",
   "scripts": {
     "server": "node server/server.js",
+    "api": "node server/api.js",
     "client": "node client/client.js",
     "dev:server": "NODE_ENV=development node server/server.js",
-    "dev:client": "NODE_ENV=development node client/client.js",
+    "dev:api": "NODE_ENV=development node server/api.js",
     "start": "node server/server.js"
   },
   "keywords": [
@@ -19,9 +20,14 @@
     "agar.io",
     "game"
   ],
-  "author": "Arena.ai Agent Mode",
+  "author": "",
   "license": "MIT",
   "dependencies": {
+    "argon2": "^0.41.1",
+    "express": "^4.19.2",
+    "http-proxy": "^1.18.1",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.11.0",
     "ws": "^8.18.0"
   },
   "engines": {

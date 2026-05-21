@@ -39,6 +39,8 @@ Poi apri:
 ```text
 http://127.0.0.1:8080
 ```
+**DISCAIMER**
+Avviare il client sulla porta 8080 poi modificare con la porta 3000
 
 Lascia host `127.0.0.1`, TCP `4000`, UDP `4001`, scegli un nickname e premi **Gioca**.
 

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login — Agar TCP/UDP</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b17;
+      --panel: rgba(12, 18, 34, 0.92);
+      --text: #ecf3ff;
+      --muted: #9fb2d0;
+      --accent: #4ecdc4;
+      --danger: #ff6b6b;
+      --line: rgba(255,255,255,.12);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; min-height: 100vh;
+      background: radial-gradient(circle at 50% 30%, #111a32 0%, #070b17 60%, #04060d 100%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Arial, sans-serif;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 20px 80px rgba(0,0,0,.45);
+      border-radius: 20px;
+      padding: 32px 28px;
+      width: min(440px, calc(100vw - 28px));
+    }
+    .logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+    .logo {
+      width: 46px; height: 46px; border-radius: 999px; flex-shrink: 0;
+      background: conic-gradient(from 90deg, #4ecdc4, #54a0ff, #f368e0, #ffe66d, #4ecdc4);
+      box-shadow: inset 0 0 0 7px rgba(255,255,255,.18), 0 0 35px rgba(78,205,196,.3);
+    }
+    h1 { margin: 0; font-size: 26px; }
+    .subtitle { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+    .tabs { display: flex; gap: 0; margin: 22px 0 20px; border-bottom: 1px solid var(--line); }
+    .tab {
+      flex: 1; text-align: center; padding: 10px 0; cursor: pointer;
+      color: var(--muted); font-size: 14px; font-weight: 600;
+      border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s, border-color .15s;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    label { display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin: 14px 0 6px; }
+    input {
+      width: 100%; border: 1px solid var(--line);
+      background: rgba(255,255,255,.07); color: var(--text);
+      padding: 11px 13px; border-radius: 12px; outline: none; font-size: 15px;
+    }
+    input:focus { border-color: rgba(78,205,196,.75); box-shadow: 0 0 0 3px rgba(78,205,196,.12); }
+    button {
+      width: 100%; margin-top: 20px; border: 0; color: #061018;
+      font-weight: 800; font-size: 15px; letter-spacing: .01em;
+      border-radius: 14px; padding: 14px 16px;
+      background: linear-gradient(135deg, #4ecdc4, #54a0ff);
+      cursor: pointer; transition: transform .12s ease, filter .12s ease;
+    }
+    button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:disabled { opacity: .5; cursor: not-allowed; transform: none; filter: none; }
+    .alert {
+      margin-top: 14px; padding: 11px 13px; border-radius: 10px;
+      font-size: 13px; display: none;
+    }
+    .alert.error { background: rgba(255,107,107,.15); border: 1px solid rgba(255,107,107,.3); color: #ff9f9f; }
+    .alert.success { background: rgba(29,209,161,.15); border: 1px solid rgba(29,209,161,.3); color: #1dd1a1; }
+    .link-row { text-align: center; margin-top: 16px; font-size: 13px; color: var(--muted); }
+    .link-row a { color: var(--accent); text-decoration: none; }
+    .link-row a:hover { text-decoration: underline; }
+    .section { display: none; }
+    .section.active { display: block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-row">
+      <div class="logo" aria-hidden="true"></div>
+      <div>
+        <h1>Agar TCP/UDP</h1>
+        <p class="subtitle">Accedi o registrati per giocare</p>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="login">Accedi</div>
+      <div class="tab" data-tab="register">Registrati</div>
+    </div>
+
+    <!-- Sezione Login -->
+    <div id="loginSection" class="section active">
+      <label for="loginEmail">Email</label>
+      <input id="loginEmail" type="email" placeholder="mario@esempio.it" autocomplete="email" />
+
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" />
+
+      <button id="loginBtn">Entra</button>
+      <div id="loginAlert" class="alert"></div>
+    </div>
+
+    <!-- Sezione Registrazione -->
+    <div id="registerSection" class="section">
+      <label for="regUsername">Nickname (quello che vedono gli altri)</label>
+      <input id="regUsername" type="text" maxlength="32" placeholder="Blob99" autocomplete="username" />
+
+      <label for="regEmail">Email</label>
+      <input id="regEmail" type="email" placeholder="mario@esempio.it" autocomplete="email" />
+
+      <label for="regPassword">Password (minimo 6 caratteri)</label>
+      <input id="regPassword" type="password" placeholder="••••••••" autocomplete="new-password" />
+
+      <button id="registerBtn">Crea account</button>
+      <div id="registerAlert" class="alert"></div>
+    </div>
+
+    <div class="link-row">
+      Vuoi solo guardare? <a href="index.html">Entra come ospite →</a>
+    </div>
+  </div>
+
+  <script>
+    // ── Tab switching ──────────────────────────────────────────────────────────
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + 'Section').classList.add('active');
+      });
+    });
+
+    // ── Helper: mostra alert ──────────────────────────────────────────────────
+    function showAlert(id, msg, type) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.className = 'alert ' + type;
+      el.style.display = 'block';
+    }
+
+    // ── Helper: chiama API ────────────────────────────────────────────────────
+    async function apiPost(url, body) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Il body viene serializzato in JSON — nessun HTML da iniettare
+        body: JSON.stringify(body),
+      });
+      return { ok: res.ok, data: await res.json() };
+    }
+
+    // ── Salva JWT in localStorage (semplice, sufficiente per uso locale/LAN) ──
+    function saveSession(token, username) {
+      localStorage.setItem('agar_token', token);
+      localStorage.setItem('agar_username', username);
+    }
+
+    // ── Login ─────────────────────────────────────────────────────────────────
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true;
+      btn.textContent = 'Accesso in corso...';
+
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      const { ok, data } = await apiPost('/api/login', { email, password });
+      btn.disabled = false;
+      btn.textContent = 'Entra';
+
+      if (!ok) {
+        showAlert('loginAlert', data.error || 'Errore sconosciuto', 'error');
+        return;
+      }
+      saveSession(data.token, data.username);
+      window.location.href = 'index.html';
+    });
+
+    // ── Registrazione ─────────────────────────────────────────────────────────
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('registerBtn');
+      btn.disabled = true;
+      btn.textContent = 'Creazione account...';
+
+      const username = document.getElementById('regUsername').value.trim();
+      const email    = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+
+      const { ok, data } = await apiPost('/api/register', { username, email, password });
+      btn.disabled = false;
+      btn.textContent = 'Crea account';
+
+      if (!ok) {
+        showAlert('registerAlert', data.error || 'Errore sconosciuto', 'error');
+        return;
+      }
+      showAlert('registerAlert', 'Account creato! Accesso automatico...', 'success');
+      saveSession(data.token, data.username);
+      setTimeout(() => { window.location.href = 'index.html'; }, 800);
+    });
+
+    // ── Se già loggato, salta la pagina ───────────────────────────────────────
+    if (localStorage.getItem('agar_token')) {
+      window.location.href = 'index.html';
+    }
+
+    // ── Invio con Enter ───────────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      const loginActive = document.getElementById('loginSection').classList.contains('active');
+      if (loginActive) document.getElementById('loginBtn').click();
+      else document.getElementById('registerBtn').click();
+    });
+  </script>
+</body>
+</html>

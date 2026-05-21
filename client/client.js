@@ -15,7 +15,7 @@ const publicDir = path.join(__dirname, 'public');
 // 0.0.0.0 abilita il multiplayer locale/LAN: altri dispositivi possono aprire
 // http://IP_DEL_PC:8080 e ogni browser/tab avrà una propria sessione TCP+UDP.
 const UI_HOST = process.env.UI_HOST || '0.0.0.0';
-const UI_PORT = Number(process.env.UI_PORT || CONFIG.UI_PORT);
+const UI_PORT = Number(CONFIG.UI_PORT);
 
 function clonePublicSession(session) {
   return { ...session, token: undefined };
