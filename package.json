@@ -1,0 +1,30 @@
+{
+  "name": "agar-sockets-js",
+  "version": "1.0.0",
+  "description": "Mini gioco stile agar.io con socket TCP e UDP in Node.js",
+  "type": "module",
+  "main": "server/server.js",
+  "scripts": {
+    "server": "node server/server.js",
+    "client": "node client/client.js",
+    "dev:server": "NODE_ENV=development node server/server.js",
+    "dev:client": "NODE_ENV=development node client/client.js",
+    "start": "node server/server.js"
+  },
+  "keywords": [
+    "nodejs",
+    "tcp",
+    "udp",
+    "socket",
+    "agar.io",
+    "game"
+  ],
+  "author": "Arena.ai Agent Mode",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

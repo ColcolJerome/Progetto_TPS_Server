@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agar TCP/UDP - Node.js</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b17;
+      --panel: rgba(12, 18, 34, 0.84);
+      --panel-strong: rgba(12, 18, 34, 0.96);
+      --text: #ecf3ff;
+      --muted: #9fb2d0;
+      --accent: #4ecdc4;
+      --danger: #ff6b6b;
+      --line: rgba(255,255,255,.12);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    canvas { display: block; width: 100vw; height: 100vh; background: radial-gradient(circle at 50% 30%, #111a32 0%, #070b17 58%, #04060d 100%); cursor: crosshair; }
+    .hud { position: fixed; inset: 0; pointer-events: none; }
+    .panel { pointer-events: auto; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(14px); box-shadow: 0 20px 80px rgba(0,0,0,.35); border-radius: 20px; }
+    .login { position: absolute; left: 50%; top: 50%; width: min(520px, calc(100vw - 28px)); transform: translate(-50%, -50%); padding: 24px; }
+    .login.hidden { display: none; }
+    .title { display:flex; align-items:center; gap: 12px; margin-bottom: 14px; }
+    .logo { width: 48px; height: 48px; border-radius: 999px; background: conic-gradient(from 90deg, #4ecdc4, #54a0ff, #f368e0, #ffe66d, #4ecdc4); box-shadow: inset 0 0 0 7px rgba(255,255,255,.18), 0 0 35px rgba(78,205,196,.3); }
+    h1 { margin: 0; font-size: 28px; line-height: 1; }
+    .subtitle { color: var(--muted); margin: 4px 0 0; font-size: 14px; }
+    label { display: block; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin: 14px 0 8px; }
+    input { width: 100%; border: 1px solid var(--line); background: rgba(255,255,255,.07); color: var(--text); padding: 12px 13px; border-radius: 12px; outline: none; font-size: 15px; }
+    input:focus { border-color: rgba(78,205,196,.75); box-shadow: 0 0 0 3px rgba(78,205,196,.12); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .color { width: 52px; min-width: 52px; height: 46px; padding: 4px; }
+    button { border: 0; color: #061018; font-weight: 800; letter-spacing: .01em; border-radius: 14px; padding: 13px 16px; background: linear-gradient(135deg, #4ecdc4, #54a0ff); cursor: pointer; transition: transform .12s ease, filter .12s ease; }
+    button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button.secondary { background: rgba(255,255,255,.11); color: var(--text); border: 1px solid var(--line); }
+    button.danger { background: linear-gradient(135deg, #ff6b6b, #ff9f43); color: #1b0c0c; }
+    .connect-row { margin-top: 18px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+    .status { font-size: 13px; color: var(--muted); line-height: 1.35; }
+    .status b { color: var(--text); }
+    .top-left { position: absolute; left: 14px; top: 14px; display: flex; flex-direction: column; gap: 10px; width: min(360px, calc(100vw - 28px)); }
+    .meter { padding: 12px 14px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(12px); }
+    .meter .line { display:flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
+    .meter strong { color: var(--text); }
+    .pill { display:inline-flex; align-items:center; gap: 6px; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.08); color: var(--muted); font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 999px; background: #ff6b6b; box-shadow: 0 0 16px currentColor; }
+    .dot.ok { background: #1dd1a1; }
+    .top-right { position: absolute; right: 14px; top: 14px; width: min(280px, calc(100vw - 28px)); padding: 14px; }
+    .leader-title { display:flex; justify-content: space-between; align-items:center; margin-bottom: 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
+    ol { margin: 0; padding-left: 24px; }
+    li { padding: 4px 0; color: var(--muted); font-size: 14px; }
+    li.me { color: #fff; font-weight: 900; }
+    .chat { position: absolute; left: 14px; bottom: 14px; width: min(460px, calc(100vw - 28px)); }
+    .messages { max-height: 190px; overflow: hidden; padding: 12px 14px 4px; text-shadow: 0 2px 8px rgba(0,0,0,.7); }
+    .msg { font-size: 14px; margin-bottom: 7px; color: rgba(236,243,255,.86); }
+    .msg.system { color: #9fb2d0; font-style: italic; }
+    .chat-form { display:flex; gap: 8px; padding: 8px; pointer-events: auto; }
+    .chat-form input { height: 40px; padding: 9px 11px; }
+    .chat-form button { padding: 0 13px; border-radius: 12px; }
+    .death { display:none; position:absolute; left:50%; top:50%; transform: translate(-50%, -50%); width:min(420px, calc(100vw - 28px)); padding: 22px; text-align:center; }
+    .death.show { display:block; }
+    .death h2 { margin: 0 0 8px; font-size: 30px; }
+    .death p { color: var(--muted); margin: 0 0 18px; }
+    .hint { position:absolute; right: 14px; bottom: 14px; max-width: 420px; color: rgba(236,243,255,.55); font-size: 12px; text-align:right; }
+    @media (max-width: 720px) {
+      .top-right { display: none; }
+      .hint { display: none; }
+      .grid2 { grid-template-columns: 1fr; }
+      .login { padding: 18px; }
+      h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div class="hud">
+    <section id="login" class="panel login">
+      <div class="title">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Agar TCP/UDP</h1>
+          <p class="subtitle">Client browser + bridge Node.js. Multiplayer locale: apri più tab o dispositivi LAN. TCP eventi, UDP real-time.</p>
+        </div>
+      </div>
+
+      <label for="name">Nickname</label>
+      <div class="row">
+        <input id="name" maxlength="16" autocomplete="nickname" placeholder="Blob" />
+        <input id="color" class="color" type="color" value="#4ecdc4" title="Colore" />
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label for="host">Server host</label>
+          <input id="host" value="127.0.0.1" spellcheck="false" />
+        </div>
+        <div>
+          <label for="tcpPort">Porta TCP</label>
+          <input id="tcpPort" type="number" value="4000" />
+        </div>
+      </div>
+      <div class="grid2">
+        <div>
+          <label for="udpPort">Porta UDP</label>
+          <input id="udpPort" type="number" value="4001" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="randomName" class="secondary" type="button" style="width:100%">Nome casuale</button>
+        </div>
+      </div>
+
+      <div class="connect-row">
+        <div id="loginStatus" class="status">Bridge locale/LAN: <b>connessione in corso...</b></div>
+        <button id="connect" type="button">Gioca</button>
+      </div>
+    </section>
+
+    <div class="top-left">
+      <div class="meter">
+        <div class="line">
+          <span><span id="tcpDot" class="dot"></span> TCP <strong id="tcpState">off</strong></span>
+          <span><span id="udpDot" class="dot"></span> UDP <strong id="udpState">off</strong></span>
+        </div>
+        <div class="line" style="margin-top:8px">
+          <span>Player: <strong id="playerName">-</strong></span>
+          <span>Massa: <strong id="mass">0</strong></span>
+        </div>
+        <div class="line" style="margin-top:8px">
+          <span class="pill">Mouse = direzione</span>
+          <span class="pill">Spazio = split</span>
+          <span class="pill">W = pellet</span>
+          <span class="pill">F = zoom</span>
+        </div>
+      </div>
+    </div>
+
+    <section class="panel top-right">
+      <div class="leader-title"><span>Classifica</span><span id="worldSize">-</span></div>
+      <ol id="leaderboard"></ol>
+    </section>
+
+    <section class="chat">
+      <div id="messages" class="messages"></div>
+      <form id="chatForm" class="chat-form panel">
+        <input id="chatInput" maxlength="180" placeholder="Scrivi in chat TCP..." autocomplete="off" />
+        <button type="submit">Invia</button>
+      </form>
+    </section>
+
+    <section id="death" class="panel death">
+      <h2>Sei stato assorbito</h2>
+      <p id="deathText">Torna al menu, cambia nome o colore e riprova.</p>
+      <button id="respawn" type="button">Torna al menu</button>
+    </section>
+
+    <div class="hint">Suggerimento: mouse per muoverti, <b>Spazio</b> per splittarti, <b>W</b> per sparare pellet, <b>F</b> alterna zoom follow/ampio, Invio/chat in basso. Apri più tab o l'URL LAN su altri dispositivi per il multiplayer locale. Il bridge usa socket TCP e UDP reali verso il server.</div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const canvas = $('game');
+    const ctx = canvas.getContext('2d');
+
+    const state = {
+      ws: null,
+      bridgeOpen: false,
+      session: {},
+      snapshot: null,
+      camera: { x: 2100, y: 2100 },
+      scale: 0.65,
+      pointer: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+      lastTargetAt: 0,
+      messages: [],
+      leaderboard: [],
+      renderPlayers: new Map(),
+      renderPellets: new Map(),
+      renderSelf: null,
+      frame: 0,
+      fullMapView: false,
+      deathTimer: null
+    };
+
+    const names = ['Nebula', 'Socket', 'Blob.js', 'Packet', 'Kernel', 'BitBall', 'Datagram', 'NodeNinja', 'TcpTiger', 'UdpWhale', 'ArenaCell'];
+    $('name').value = names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 90);
+
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+    function now() { return performance.now(); }
+
+    function resize() {
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      canvas.width = Math.floor(window.innerWidth * dpr);
+      canvas.height = Math.floor(window.innerHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function connectBridge() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${proto}//${location.host}/bridge`);
+      state.ws = ws;
+
+      ws.addEventListener('open', () => {
+        state.bridgeOpen = true;
+        $('loginStatus').innerHTML = 'Bridge locale/LAN: <b>online</b>. Apri più tab o usa altri dispositivi sulla stessa rete.';
+      });
+      ws.addEventListener('close', () => {
+        state.bridgeOpen = false;
+        $('loginStatus').innerHTML = 'Bridge locale: <b>offline</b>. Riprovo...';
+        setTimeout(connectBridge, 800);
+      });
+      ws.addEventListener('message', (event) => {
+        const msg = JSON.parse(event.data);
+        handleBridgeMessage(msg);
+      });
+    }
+
+    function send(payload) {
+      if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify(payload));
+      }
+    }
+
+    function handleBridgeMessage(msg) {
+      if (msg.type === 'bridgeState') {
+        state.session = msg.session || state.session;
+        updateHud(msg);
+        if (msg.event === 'dead') scheduleDeathMessage(msg);
+        if (msg.event === 'respawned' || msg.event === 'welcome') hideDeath();
+      }
+      if (msg.type === 'snapshot') {
+        state.snapshot = msg.snapshot;
+        state.leaderboard = msg.snapshot.leaderboard || state.leaderboard;
+        updateHud();
+      }
+      if (msg.type === 'tcpMessage') {
+        handleTcpUiMessage(msg.message);
+      }
+      if (msg.type === 'udpError') addMessage('system', msg.message);
+    }
+
+    function handleTcpUiMessage(msg) {
+      if (!msg) return;
+      if (msg.type === 'chat') {
+        addMessage('chat', msg.text, msg.from);
+      } else if (msg.type === 'system') {
+        addMessage('system', msg.message);
+      } else if (msg.type === 'leaderboard') {
+        state.leaderboard = msg.leaderboard || [];
+        updateHud();
+      } else if (msg.type === 'error') {
+        addMessage('system', 'Errore: ' + msg.message);
+      }
+    }
+
+    function addMessage(kind, text, from) {
+      state.messages.push({ kind, text: String(text || ''), from, at: Date.now() });
+      state.messages = state.messages.slice(-9);
+      const box = $('messages');
+      box.innerHTML = state.messages.map(m => {
+        const cls = m.kind === 'system' ? 'msg system' : 'msg';
+        const prefix = m.from ? `<b style="color:${m.from.color || '#fff'}">${escapeHtml(m.from.name)}</b>: ` : '';
+        return `<div class="${cls}">${prefix}${escapeHtml(m.text)}</div>`;
+      }).join('');
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    }
+
+    function updateHud(eventMsg = {}) {
+      const s = state.session || {};
+      const snap = state.snapshot;
+      $('login').classList.toggle('hidden', Boolean(s.connected));
+      $('tcpDot').classList.toggle('ok', Boolean(s.connected));
+      $('udpDot').classList.toggle('ok', Boolean(s.udpReady));
+      $('tcpState').textContent = s.connected ? 'on' : (s.connecting ? '...' : 'off');
+      $('udpState').textContent = s.udpReady ? 'on' : 'off';
+      $('playerName').textContent = s.name || '-';
+      $('mass').textContent = snap?.self ? Math.floor(snap.self.score) : '0';
+      if (snap?.world) $('worldSize').textContent = `${snap.world.width}×${snap.world.height}`;
+
+      if (s.lastError) $('loginStatus').innerHTML = `Errore: <b>${escapeHtml(s.lastError)}</b>`;
+
+      const board = state.leaderboard || [];
+      $('leaderboard').innerHTML = board.map(item => {
+        const me = item.id === s.id ? ' class="me"' : '';
+        return `<li${me}>${escapeHtml(item.name)} <small>${Math.floor(item.score)}</small></li>`;
+      }).join('');
+    }
+
+    function scheduleDeathMessage(msg) {
+      if (state.deathTimer) clearTimeout(state.deathTimer);
+      const text = msg.deathMessage || 'Sei stato assorbito.';
+      // Il messaggio compare 2 secondi dopo la morte effettiva, come richiesto.
+      state.deathTimer = setTimeout(() => showDeath({ deathMessage: text }), 2000);
+    }
+
+    function showDeath(msg) {
+      $('death').classList.add('show');
+      $('deathText').textContent = (msg.deathMessage || 'Sei stato assorbito.') + ' Puoi cambiare nome o colore dal menu.';
+      $('loginStatus').innerHTML = 'Sei morto: <b>puoi rientrare con un nuovo nome/colore</b>.';
+    }
+    function hideDeath() {
+      if (state.deathTimer) clearTimeout(state.deathTimer);
+      state.deathTimer = null;
+      $('death').classList.remove('show');
+    }
+
+    $('connect').addEventListener('click', () => {
+      send({
+        type: 'connect',
+        name: $('name').value,
+        color: $('color').value,
+        host: $('host').value || '127.0.0.1',
+        tcpPort: Number($('tcpPort').value || 4000),
+        udpPort: Number($('udpPort').value || 4001)
+      });
+    });
+    $('randomName').addEventListener('click', () => {
+      $('name').value = names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 90);
+    });
+    $('respawn').addEventListener('click', () => { hideDeath(); $('login').classList.remove('hidden'); });
+    $('chatForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const text = $('chatInput').value.trim();
+      if (text) send({ type: 'chat', text });
+      $('chatInput').value = '';
+    });
+
+    function screenToWorld(clientX, clientY) {
+      return {
+        x: state.camera.x + (clientX - window.innerWidth / 2) / state.scale,
+        y: state.camera.y + (clientY - window.innerHeight / 2) / state.scale
+      };
+    }
+
+    function updatePointer(clientX, clientY, force = false) {
+      state.pointer = { x: clientX, y: clientY };
+      if (!state.snapshot?.self || !state.session?.udpReady) return;
+      const t = now();
+      if (!force && t - state.lastTargetAt < 32) return;
+      state.lastTargetAt = t;
+      const world = screenToWorld(clientX, clientY);
+      send({ type: 'target', tx: world.x, ty: world.y });
+    }
+    canvas.addEventListener('mousemove', e => updatePointer(e.clientX, e.clientY));
+    canvas.addEventListener('mousedown', e => updatePointer(e.clientX, e.clientY, true));
+    canvas.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      if (t) updatePointer(t.clientX, t.clientY);
+      e.preventDefault();
+    }, { passive: false });
+
+    function activeElementIsTextInput() {
+      const el = document.activeElement;
+      return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+    }
+
+    function splitTowardPointer() {
+      if (!state.snapshot?.self || !state.session?.udpReady) return;
+      const target = screenToWorld(state.pointer.x || window.innerWidth / 2, state.pointer.y || window.innerHeight / 2);
+      send({ type: 'split', tx: target.x, ty: target.y });
+    }
+
+    function ejectTowardPointer() {
+      if (!state.snapshot?.self || !state.session?.udpReady) return;
+      const target = screenToWorld(state.pointer.x || window.innerWidth / 2, state.pointer.y || window.innerHeight / 2);
+      send({ type: 'eject', tx: target.x, ty: target.y });
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (event.code === 'Space' && !activeElementIsTextInput()) {
+        event.preventDefault();
+        splitTowardPointer();
+      } else if (event.code === 'KeyW' && !activeElementIsTextInput()) {
+        event.preventDefault();
+        ejectTowardPointer();
+      } else if (event.code === 'KeyF' && !activeElementIsTextInput()) {
+        event.preventDefault();
+        state.fullMapView = !state.fullMapView;
+        addMessage('system', state.fullMapView ? 'Zoom ampio attivo.' : 'Zoom follow classico attivo.');
+      }
+    });
+
+    function worldToScreen(x, y) {
+      return {
+        x: (x - state.camera.x) * state.scale + window.innerWidth / 2,
+        y: (y - state.camera.y) * state.scale + window.innerHeight / 2
+      };
+    }
+
+    function smoothEntity(map, raw, alpha = 0.32) {
+      let entity = map.get(raw.id);
+      if (!entity) {
+        entity = { ...raw };
+        map.set(raw.id, entity);
+      } else {
+        entity.x += (raw.x - entity.x) * alpha;
+        entity.y += (raw.y - entity.y) * alpha;
+        entity.r += (raw.r - entity.r) * alpha;
+        entity.name = raw.name;
+        entity.color = raw.color;
+        entity.ownerId = raw.ownerId;
+        entity.score = raw.score;
+        entity.kills = raw.kills;
+        entity.isBot = raw.isBot;
+        entity.cellCount = raw.cellCount;
+      }
+      entity._seen = state.frame;
+      return entity;
+    }
+
+    function smoothSelf(raw, alpha = 0.24) {
+      if (!state.renderSelf || state.renderSelf.id !== raw.id) {
+        state.renderSelf = { ...raw };
+      } else {
+        state.renderSelf.x += (raw.x - state.renderSelf.x) * alpha;
+        state.renderSelf.y += (raw.y - state.renderSelf.y) * alpha;
+        state.renderSelf.r += (raw.r - state.renderSelf.r) * alpha;
+        state.renderSelf.score = raw.score;
+        state.renderSelf.cells = raw.cells;
+      }
+      return state.renderSelf;
+    }
+
+    function drawGrid(world) {
+      const size = 100;
+      const left = state.camera.x - window.innerWidth / 2 / state.scale;
+      const top = state.camera.y - window.innerHeight / 2 / state.scale;
+      const right = state.camera.x + window.innerWidth / 2 / state.scale;
+      const bottom = state.camera.y + window.innerHeight / 2 / state.scale;
+      ctx.save();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255,255,255,.055)';
+      ctx.beginPath();
+      for (let x = Math.floor(left / size) * size; x <= right; x += size) {
+        const s = worldToScreen(x, 0).x;
+        ctx.moveTo(s, 0); ctx.lineTo(s, window.innerHeight);
+      }
+      for (let y = Math.floor(top / size) * size; y <= bottom; y += size) {
+        const s = worldToScreen(0, y).y;
+        ctx.moveTo(0, s); ctx.lineTo(window.innerWidth, s);
+      }
+      ctx.stroke();
+
+      const a = worldToScreen(0, 0);
+      const b = worldToScreen(world.width, world.height);
+      ctx.strokeStyle = 'rgba(78,205,196,.45)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+      ctx.restore();
+    }
+
+    function drawCircle(x, y, r, color, opts = {}) {
+      const p = worldToScreen(x, y);
+      const sr = Math.max(1, r * state.scale);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, sr, 0, Math.PI * 2);
+      if (opts.shadow) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = opts.shadow;
+      }
+      ctx.fillStyle = color;
+      ctx.fill();
+      if (opts.stroke) {
+        ctx.lineWidth = opts.strokeWidth || 3;
+        ctx.strokeStyle = opts.stroke;
+        ctx.stroke();
+      }
+      ctx.restore();
+      return { p, sr };
+    }
+
+    function drawPlayer(p, isSelf) {
+      const out = drawCircle(p.x, p.y, p.r, p.color || '#fff', {
+        shadow: isSelf ? 22 : 8,
+        stroke: isSelf ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.24)',
+        strokeWidth: isSelf ? 4 : 2
+      });
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `800 ${clamp(out.sr * 0.26, 11, 22)}px ui-sans-serif, system-ui`;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(0,0,0,.65)';
+      ctx.fillStyle = '#fff';
+      const label = p.name || 'Blob';
+      ctx.strokeText(label, out.p.x, out.p.y);
+      ctx.fillText(label, out.p.x, out.p.y);
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      const snap = state.snapshot;
+      if (!snap?.self) {
+        drawSplash();
+        requestAnimationFrame(render);
+        return;
+      }
+
+      state.frame += 1;
+      const self = smoothSelf(snap.self);
+      const world = snap.world || { width: 4200, height: 4200 };
+      state.camera.x += (self.x - state.camera.x) * 0.18;
+      state.camera.y += (self.y - state.camera.y) * 0.18;
+      // F ora è solo uno zoom-out strategico che segue il player: non forza più
+      // la visualizzazione dell'intera mappa.
+      const targetScale = state.fullMapView
+        ? clamp(28 / self.r, 0.18, 0.58)
+        : clamp(48 / self.r, 0.28, 1.05);
+      state.scale += (targetScale - state.scale) * 0.08;
+
+      drawGrid(world);
+
+      for (const f of snap.food || []) {
+        drawCircle(f.x, f.y, f.r, f.color || '#ffe66d', { shadow: 7 });
+      }
+
+      const pellets = [...(snap.pellets || [])]
+        .map(p => smoothEntity(state.renderPellets, p, 0.42));
+      for (const [id, entity] of state.renderPellets) {
+        if (entity._seen !== state.frame) state.renderPellets.delete(id);
+      }
+      for (const pellet of pellets) {
+        drawCircle(pellet.x, pellet.y, pellet.r, pellet.color || '#c8d6e5', {
+          shadow: 11,
+          stroke: 'rgba(255,255,255,.42)',
+          strokeWidth: 1.5
+        });
+      }
+
+      const players = [...(snap.players || [])]
+        .map(p => smoothEntity(state.renderPlayers, p))
+        .sort((a, b) => a.r - b.r);
+      for (const [id, entity] of state.renderPlayers) {
+        if (entity._seen !== state.frame) state.renderPlayers.delete(id);
+      }
+      for (const p of players) drawPlayer(p, p.ownerId === snap.selfId);
+
+      drawMinimap({ ...snap, self });
+      requestAnimationFrame(render);
+    }
+
+    function drawSplash() {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,.09)';
+      for (let i = 0; i < 34; i++) {
+        const x = (i * 191) % window.innerWidth;
+        const y = (i * 317) % window.innerHeight;
+        const r = 5 + (i % 9) * 3;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawMinimap(snap) {
+      const world = snap.world || { width: 4200, height: 4200 };
+      const w = 150, h = 150;
+      const x = window.innerWidth - w - 16;
+      const y = window.innerHeight - h - 50;
+      if (window.innerWidth < 720) return;
+      ctx.save();
+      ctx.fillStyle = 'rgba(12,18,34,.65)';
+      ctx.strokeStyle = 'rgba(255,255,255,.13)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, 14); ctx.fill(); ctx.stroke();
+      const sx = x + (snap.self.x / world.width) * w;
+      const sy = y + (snap.self.y / world.height) * h;
+      ctx.fillStyle = snap.self.color || '#fff';
+      ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    // Polyfill minimo per browser meno recenti.
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        r = Math.min(r, w / 2, h / 2);
+        this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r);
+        this.arcTo(x + w, y + h, x, y + h, r); this.arcTo(x, y + h, x, y, r);
+        this.arcTo(x, y, x + w, y, r); return this;
+      };
+    }
+
+    connectBridge();
+    updateHud();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
