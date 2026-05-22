@@ -8,7 +8,7 @@ export const CONFIG = {
   SNAPSHOT_RATE: 30,
   LEADERBOARD_RATE: 2,
   FOOD_COUNT: 520,
-  BOT_COUNT: Number(process.env.BOT_COUNT || 10),
+  BOT_COUNT: Number(process.env.BOT_COUNT || 0),
   MAX_NAME_LENGTH: 16,
   START_RADIUS: 30,
   FOOD_RADIUS_MIN: 4,

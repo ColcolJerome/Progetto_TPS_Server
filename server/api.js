@@ -8,11 +8,6 @@ import express from 'express';
 import mysql from 'mysql2/promise';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createServer } from 'node:http';
-import httpProxy from 'http-proxy';
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── Configurazione ──────────────────────────────────────────────────────────
 
@@ -34,9 +29,6 @@ const pool = mysql.createPool({
 
 const app = express();
 
-// Serve la cartella client/public come root (index.html, login.html, ecc.)
-app.use(express.static(path.join(__dirname, '../client/public')));
-console.log('Static path:', path.join(__dirname, '../client/public'));
 app.use(express.json());
 
 // ─── Sicurezza: header anti-XSS di base ──────────────────────────────────────
@@ -287,15 +279,8 @@ app.post('/api/stats', auth, async (req, res) => {
 });
 
 // ─── Avvio server ─────────────────────────────────────────────────────────────
-const proxy = httpProxy.createProxyServer({ ws: true });
-
-const server = createServer(app);
-
-// Tutte le richieste WebSocket le gira al bridge sulla 8080
-server.on('upgrade', (req, socket, head) => {
-  proxy.ws(req, socket, head, { target: 'ws://localhost:8080' });
-});
-
-server.listen(API_PORT, () => {
-  console.log(`[API] in ascolto su http://localhost:${API_PORT}`);
+// Ascolta solo su 127.0.0.1: raggiungibile dal bridge in client.js, non dalla rete
+app.listen(API_PORT, '127.0.0.1', () => {
+  console.log(`[API] in ascolto su http://127.0.0.1:${API_PORT}`);
+  console.log(`[API] raggiungibile dal browser tramite http://localhost:8080/api/...`);
 });

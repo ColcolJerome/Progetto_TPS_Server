@@ -329,9 +329,38 @@ class GameBridgeSession {
     }
   }
 }
+// Porta del server API — deve corrispondere a quella in api.js
+const API_PORT = Number(process.env.API_PORT || 3000);
+
+// Gira le richieste /api/... al server Express su 127.0.0.1:3000
+function proxyToApi(req, res) {
+  const options = {
+    hostname: '127.0.0.1',
+    port: API_PORT,
+    path: req.url,
+    method: req.method,
+    headers: req.headers,
+  };
+  const proxyReq = http.request(options, proxyRes => {
+    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    proxyRes.pipe(res);
+  });
+  proxyReq.on('error', () => {
+    res.writeHead(502, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'API server non raggiungibile' }));
+  });
+  req.pipe(proxyReq);
+}
 
 const httpServer = http.createServer((req, res) => {
   const requestUrl = new URL(req.url || '/', `http://${req.headers.host}`);
+
+  // Smista: /api/... → API server su :3000, tutto il resto → file statici
+  if (requestUrl.pathname.startsWith('/api/')) {
+    proxyToApi(req, res);
+    return;
+  }
+
   let filePath = requestUrl.pathname === '/' ? '/index.html' : requestUrl.pathname;
   filePath = path.normalize(filePath).replace(/^\.\.(\/|\\|$)/, '');
   const absolutePath = path.join(publicDir, filePath);

@@ -196,6 +196,7 @@
       scale: 0.65,
       pointer: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
       lastTargetAt: 0,
+      pendingTarget: null,
       messages: [],
       leaderboard: [],
       renderPlayers: new Map(),
@@ -253,11 +254,13 @@
         updateHud(msg);
         if (msg.event === 'dead') scheduleDeathMessage(msg);
         if (msg.event === 'respawned' || msg.event === 'welcome') hideDeath();
+        if (msg.event === 'udpReady') sendPendingTarget();
       }
       if (msg.type === 'snapshot') {
         state.snapshot = msg.snapshot;
         state.leaderboard = msg.snapshot.leaderboard || state.leaderboard;
         updateHud();
+        if (state.session?.udpReady) sendPendingTarget();
       }
       if (msg.type === 'tcpMessage') {
         handleTcpUiMessage(msg.message);
@@ -402,13 +405,31 @@
       };
     }
 
+    function sendPendingTarget() {
+      if (!state.pendingTarget || !state.snapshot?.self || !state.session?.udpReady) return;
+      send({ type: 'target', tx: state.pendingTarget.x, ty: state.pendingTarget.y });
+      state.pendingTarget = null;
+      state.lastTargetAt = now();
+    }
+
+    function maybeSendTarget(force = false) {
+      if (!state.snapshot?.self || !state.session?.udpReady) return;
+      const world = screenToWorld(state.pointer.x, state.pointer.y);
+      state.pendingTarget = { x: world.x, y: world.y };
+      const t = now();
+      if (!force && t - state.lastTargetAt < 32) return;
+      state.lastTargetAt = t;
+      send({ type: 'target', tx: world.x, ty: world.y });
+    }
+
     function updatePointer(clientX, clientY, force = false) {
       state.pointer = { x: clientX, y: clientY };
+      const world = screenToWorld(clientX, clientY);
+      state.pendingTarget = { x: world.x, y: world.y };
       if (!state.snapshot?.self || !state.session?.udpReady) return;
       const t = now();
       if (!force && t - state.lastTargetAt < 32) return;
       state.lastTargetAt = t;
-      const world = screenToWorld(clientX, clientY);
       send({ type: 'target', tx: world.x, ty: world.y });
     }
     canvas.addEventListener('mousemove', e => updatePointer(e.clientX, e.clientY));
@@ -579,6 +600,7 @@
         ? clamp(28 / self.r, 0.18, 0.58)
         : clamp(48 / self.r, 0.28, 1.05);
       state.scale += (targetScale - state.scale) * 0.08;
+      maybeSendTarget();
 
       drawGrid(world);
 
